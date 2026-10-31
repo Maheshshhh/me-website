@@ -44,7 +44,7 @@ These are browser publishable/anon settings, not secrets. Never configure a Supa
 
 The Supabase migration at `supabase/migrations/20261031000000_initial_profile.sql` provides per-user row-level access and private resume storage. Apply it separately to both the UAT and production Supabase projects.
 
-The resume and mobile number are currently hidden from the profile, and the resume file is excluded from new GitHub Pages builds. Earlier public commits may still contain the resume in Git history; removing it from the current site does not remove previously accessible copies.
+The resume and mobile number are currently hidden from the profile, and the resume file is excluded from new GitHub Pages builds. Earlier public commits may still contain both in Git history; removing them from the current site does not remove previously accessible copies.
 
 ## Scale boundary
 
