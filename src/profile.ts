@@ -1,4 +1,4 @@
-export type View = "Overview" | "Personal details" | "Experience" | "Skills" | "Achievements" | "Resume";
+export type View = "Overview" | "Personal details" | "Experience" | "Skills" | "Achievements" | "Projects & education" | "Resume";
 
 export type Experience = {
   role: string;
@@ -13,6 +13,19 @@ export type Achievement = {
   year: string;
 };
 
+export type Project = {
+  title: string;
+  domain: string;
+  description: string;
+};
+
+export type Education = {
+  degree: string;
+  institution: string;
+  dates: string;
+  location: string;
+};
+
 export type Profile = {
   name: string;
   title: string;
@@ -24,45 +37,90 @@ export type Profile = {
   skills: string[];
   experience: Experience[];
   achievements: Achievement[];
+  projects: Project[];
+  education: Education[];
   resumeName: string;
   resumePath?: string;
 };
 
 export const demoProfile: Profile = {
-  name: "Alex Morgan",
-  title: "Product Designer",
-  location: "Brooklyn, New York",
-  email: "alex.morgan@email.com",
-  phone: "+1 (555) 012-3456",
-  website: "alexmorgan.design",
+  name: "Mahesh Shinde",
+  title: "React JS Developer",
+  location: "Pune, India",
+  email: "28mahesh7@gmail.com",
+  phone: "+91 8087497574",
+  website: "linkedin.com/in/maheshshh",
   summary:
-    "I turn complex problems into clear, thoughtful experiences. Over the past 8 years, I've partnered with curious teams to build products that make everyday work feel a little easier.",
-  skills: ["Product design", "Design systems", "Prototyping", "Figma", "User research", "Accessibility"],
+    "Senior Front End Developer with 5+ years of experience specializing in React.js. Strong expertise in UI/UX implementation, API integration, Redux state management, performance optimization, and responsive design. Currently working in investment banking, delivering production-ready solutions in Agile Scrum environments with cross-functional teams.",
+  skills: [
+    "React.js",
+    "JavaScript (ES6+)",
+    "TypeScript",
+    "Redux",
+    "React Native",
+    "Context API",
+    "Material UI",
+    "React Hooks",
+    "HTML5",
+    "CSS3",
+    "Webpack",
+    "REST APIs",
+    "Jest",
+    "Git",
+    "GitHub",
+    "GitLab",
+    "Postman",
+    "Chrome DevTools",
+    "Xcode",
+    "Gradle",
+    "Jira",
+    "Confluence",
+    "Azure DevOps",
+    "CI/CD",
+    "Responsive design",
+    "Performance optimization",
+  ],
   experience: [
     {
-      role: "Senior Product Designer",
-      company: "Linear",
-      dates: "2022 — Present",
-      description: "Leading product design for collaboration workflows, from early research through polished, shipped experiences.",
+      role: "Senior Analyst",
+      company: "Northern Trust",
+      dates: "Sep 2024 — Present",
+      description: "Owned end-to-end migration from legacy APIs to new services across UI modules without impacting user experience. Optimized React component rendering and built a reusable component library shared across teams. Work in a shared monorepo, integrate REST APIs, and collaborate with stakeholders on technical decisions.",
     },
     {
-      role: "Product Designer",
-      company: "Webflow",
-      dates: "2019 — 2022",
-      description: "Designed intuitive tools that helped creators bring their ideas to the web.",
+      role: "Associate",
+      company: "Cognizant Technology Solutions",
+      dates: "Oct 2021 — Sep 2024",
+      description: "Developed a single-codebase application supporting multiple global tenants, using feature flags to tailor market experiences. Built responsive mobile-first UI, improved cross-browser compatibility, wrote Jest unit tests, and used GitHub Copilot to accelerate development.",
+    },
+  ],
+  achievements: [],
+  projects: [
+    {
+      title: "Investment Banking Applications",
+      domain: "Investment Banking / Financial Services",
+      description: "React applications for managing investment accounts, portfolios, and transaction workflows.",
     },
     {
-      role: "UX Designer",
-      company: "Northstar Studio",
-      dates: "2017 — 2019",
-      description: "Worked with cross-functional teams to shape digital products for early-stage companies.",
+      title: "Food Ordering Application",
+      domain: "Food & Retail Technology",
+      description: "A large-scale digital ordering platform delivered as a React Native cross-platform mobile app and React.js progressive web app, supporting multi-tenant restaurant operations across global markets.",
+    },
+    {
+      title: "Field Service Management Applications",
+      domain: "Enterprise Mobility / Field Operations",
+      description: "A React Native mobile application for field engineers to manage service requests, tool orders, and on-site operations.",
     },
   ],
-  achievements: [
-    { title: "Awwwards Honorable Mention", issuer: "Awwwards", year: "2023" },
-    { title: "Certified Usability Analyst", issuer: "HFI", year: "2021" },
+  education: [
+    {
+      degree: "Bachelor of Engineering (BE)",
+      institution: "Sanjivani College of Engineering, Savitribai Phule Pune University",
+      dates: "2017 — 2021",
+      location: "Kopargaon, India",
+    },
   ],
-  resumeName: "Alex_Morgan_Resume.pdf",
+  resumeName: "Mahesh_ReactJS_5+.pdf",
 };
 
 export function createEmptyProfile(email: string): Profile {
@@ -77,6 +135,8 @@ export function createEmptyProfile(email: string): Profile {
     skills: [],
     experience: [],
     achievements: [],
+    projects: [],
+    education: [],
     resumeName: "",
   };
 }

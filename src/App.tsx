@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
-import { createEmptyProfile, demoProfile, type Achievement, type Experience, type Profile, type View } from "./profile";
+import { createEmptyProfile, demoProfile, type Achievement, type Education, type Experience, type Profile, type Project, type View } from "./profile";
 import { supabase } from "./supabase";
 
 const appEnvironment = import.meta.env.VITE_APP_ENV ?? "development";
+const localResumeUrl = `${import.meta.env.BASE_URL}Mahesh_ReactJS_5+.pdf`;
 
 const navigation: { label: View; icon: string }[] = [
   { label: "Overview", icon: "grid" },
@@ -11,6 +12,7 @@ const navigation: { label: View; icon: string }[] = [
   { label: "Experience", icon: "briefcase" },
   { label: "Skills", icon: "sparkles" },
   { label: "Achievements", icon: "award" },
+  { label: "Projects & education", icon: "graduation" },
   { label: "Resume", icon: "file" },
 ];
 
@@ -21,6 +23,7 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
     briefcase: <><rect x="3" y="7" width="18" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2" /></>,
     sparkles: <><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" /></>,
     award: <><circle cx="12" cy="8" r="6" /><path d="m8.2 13-1.2 8 5-2.5 5 2.5-1.2-8" /></>,
+    graduation: <><path d="m2 10 10-5 10 5-10 5-10-5Z" /><path d="M6 12v5c3.4 2.5 8.6 2.5 12 0v-5M22 10v6" /></>,
     file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8M8 17h8" /></>,
     chevron: <path d="m9 18 6-6-6-6" />,
     arrow: <><path d="M7 17 17 7M7 7h10v10" /></>,
@@ -57,6 +60,21 @@ function normalizeProfile(value: unknown, fallback: Profile): Profile {
       description: typeof item.description === "string" ? item.description : "",
     }))
     : fallback.experience;
+  const projects = Array.isArray(value.projects)
+    ? value.projects.filter(isRecord).map((item) => ({
+      title: typeof item.title === "string" ? item.title : "",
+      domain: typeof item.domain === "string" ? item.domain : "",
+      description: typeof item.description === "string" ? item.description : "",
+    }))
+    : fallback.projects;
+  const education = Array.isArray(value.education)
+    ? value.education.filter(isRecord).map((item) => ({
+      degree: typeof item.degree === "string" ? item.degree : "",
+      institution: typeof item.institution === "string" ? item.institution : "",
+      dates: typeof item.dates === "string" ? item.dates : "",
+      location: typeof item.location === "string" ? item.location : "",
+    }))
+    : fallback.education;
   const achievements = Array.isArray(value.achievements)
     ? value.achievements.filter(isRecord).map((item) => ({
       title: typeof item.title === "string" ? item.title : "",
@@ -75,6 +93,8 @@ function normalizeProfile(value: unknown, fallback: Profile): Profile {
     skills,
     experience,
     achievements,
+    projects,
+    education,
     resumeName: text("resumeName", fallback.resumeName),
     resumePath: text("resumePath", fallback.resumePath ?? ""),
   };
@@ -82,7 +102,7 @@ function normalizeProfile(value: unknown, fallback: Profile): Profile {
 
 function loadDemoProfile(): Profile {
   try {
-    const saved = localStorage.getItem("careerfolio-profile");
+    const saved = localStorage.getItem("careerfolio-profile-mahesh-v1");
     return saved ? normalizeProfile(JSON.parse(saved), demoProfile) : demoProfile;
   } catch (error) {
     console.error("Unable to load the saved profile.", error);
@@ -109,7 +129,7 @@ function App() {
   useEffect(() => {
     if (!supabase) {
       try {
-        localStorage.setItem("careerfolio-profile", JSON.stringify(profile));
+        localStorage.setItem("careerfolio-profile-mahesh-v1", JSON.stringify(profile));
       } catch (error) {
         console.error("Unable to save the profile in browser storage.", error);
         setToast("Changes couldn't be saved in this browser.");
@@ -403,8 +423,10 @@ function App() {
         return <SkillsSection skills={profile.skills} onAdd={addSkill} onRemove={removeSkill} />;
       case "Achievements":
         return <AchievementsSection achievements={profile.achievements} onAdd={() => setModal("achievement")} onRemove={(index) => updateProfile("achievements", profile.achievements.filter((_, itemIndex) => itemIndex !== index))} />;
+      case "Projects & education":
+        return <ProjectsEducationSection projects={profile.projects} education={profile.education} />;
       case "Resume":
-        return <ResumeSection profile={profile} onFile={handleResume} onDownload={downloadResume} canDownload={Boolean(supabase && profile.resumePath)} />;
+        return <ResumeSection profile={profile} onFile={handleResume} onDownload={downloadResume} canDownload={Boolean(supabase && profile.resumePath)} localResumeUrl={localResumeUrl} />;
       default:
         return (
           <Overview
@@ -697,7 +719,41 @@ function AchievementsSection({ achievements, onAdd, onRemove }: { achievements: 
   );
 }
 
-function ResumeSection({ profile, onFile, onDownload, canDownload }: { profile: Profile; onFile: (event: ChangeEvent<HTMLInputElement>) => void; onDownload: () => void; canDownload: boolean }) {
+function ProjectsEducationSection({ projects, education }: { projects: Project[]; education: Education[] }) {
+  return (
+    <>
+      <PageHeading eyebrow="SELECTED WORK & LEARNING" title="Projects & education" description="A snapshot of the domains you've worked in and the foundation behind your skills." />
+      <section className="section-panel">
+        <div className="section-panel-heading"><div><h3>Projects & domains</h3><p>Representative applications and industries from your resume.</p></div><span className="count-pill">{projects.length} projects</span></div>
+        {projects.length ? (
+          <div className="project-list">
+            {projects.map((project) => (
+              <article className="project-card" key={project.title}>
+                <span className="project-icon"><Icon name="briefcase" size={18} /></span>
+                <div><h4>{project.title}</h4><span className="project-domain">{project.domain}</span><p>{project.description}</p></div>
+              </article>
+            ))}
+          </div>
+        ) : <EmptyState title="Projects will appear here" description="Add project experience to your profile." />}
+      </section>
+      <section className="section-panel education-panel">
+        <div className="section-panel-heading"><div><h3>Education</h3><p>Your academic background.</p></div><span className="count-pill">{education.length} {education.length === 1 ? "qualification" : "qualifications"}</span></div>
+        {education.length ? (
+          <div className="education-list">
+            {education.map((item) => (
+              <article className="education-row" key={`${item.degree}-${item.institution}`}>
+                <span className="education-icon"><Icon name="graduation" size={20} /></span>
+                <div><h4>{item.degree}</h4><p>{item.institution}</p><span>{item.dates}{item.location ? ` · ${item.location}` : ""}</span></div>
+              </article>
+            ))}
+          </div>
+        ) : <EmptyState title="Education will appear here" description="Add education details to your profile." />}
+      </section>
+    </>
+  );
+}
+
+function ResumeSection({ profile, onFile, onDownload, canDownload, localResumeUrl }: { profile: Profile; onFile: (event: ChangeEvent<HTMLInputElement>) => void; onDownload: () => void; canDownload: boolean; localResumeUrl: string }) {
   return (
     <>
       <PageHeading eyebrow="YOUR EXPERIENCE, ON PAPER" title="Resume" description="Keep a current resume ready to share when the right opportunity appears." />
@@ -705,8 +761,10 @@ function ResumeSection({ profile, onFile, onDownload, canDownload }: { profile: 
         <div className="resume-page-top"><span className="resume-large-icon"><Icon name="file" size={24} /></span><div><span className="eyebrow">CURRENT RESUME</span><h3>{profile.resumeName || "No resume added yet"}</h3><p>PDF or Word document · Up to 10 MB</p></div></div>
         <div className="resume-page-divider" />
         <label className="button button-primary resume-upload-button"><Icon name="download" size={16} /> Choose a file<input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={onFile} /></label>
-        {canDownload && <button className="button button-outline resume-download-button" onClick={onDownload}><Icon name="download" size={16} /> Download resume</button>}
-        <p className="storage-note">{canDownload ? "Your resume is stored privately in your account." : "Demo files are not uploaded. Sign in with a connected Supabase project to store resumes privately."}</p>
+        {canDownload
+          ? <button className="button button-outline resume-download-button" onClick={onDownload}><Icon name="download" size={16} /> Download resume</button>
+          : !supabase && profile.resumeName === demoProfile.resumeName && <a className="button button-outline resume-download-button" href={localResumeUrl} download="Mahesh_ReactJS_5+.pdf"><Icon name="download" size={16} /> Download resume</a>}
+        <p className="storage-note">{canDownload ? "Your resume is stored privately in your account." : !supabase && profile.resumeName === demoProfile.resumeName ? "This resume is included in the public site and can be downloaded by anyone." : "Demo files selected here aren't uploaded. Sign in with a connected Supabase project to store resumes privately."}</p>
       </section>
     </>
   );

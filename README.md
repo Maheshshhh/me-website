@@ -44,6 +44,8 @@ These are browser publishable/anon settings, not secrets. Never configure a Supa
 
 The Supabase migration at `supabase/migrations/20261031000000_initial_profile.sql` provides per-user row-level access and private resume storage. Apply it separately to both the UAT and production Supabase projects.
 
+The demo profile's resume file is included in the public GitHub Pages build and is downloadable by anyone. Use Supabase-backed private uploads for documents that should not be publicly accessible.
+
 ## Scale boundary
 
 The UAT/production split prevents accidental data/config sharing but is not a guarantee of multi-million-tenant capacity. Size and load-test each backend environment, establish monitoring and backups, and review rate limits and data-retention requirements before a large launch.

@@ -178,6 +178,18 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .achievement-row { display: flex; align-items: center; gap: 13px; padding: 12px 0; border-bottom: 1px solid #f0f1f3; }
 .achievement-row:first-child { padding-top: 0; }
 .achievement-row:last-child { border-bottom: 0; }
+.project-list { display: grid; gap: 12px; }
+.project-card { display: flex; align-items: flex-start; gap: 13px; border: 1px solid #eef0f3; background: #fdfdfe; border-radius: 9px; padding: 14px; }
+.project-icon, .education-icon { flex: 0 0 auto; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: #f0eeff; color: var(--purple-dark); }
+.project-card h4, .education-row h4 { font-size: 12px; margin: 0 0 5px; font-weight: 600; color: #354151; }
+.project-domain { display: inline-block; color: #6558b0; background: #f3f2fb; border: 1px solid #eeecf8; padding: 4px 7px; border-radius: 5px; font-size: 9px; }
+.project-card p { margin: 8px 0 0; color: #7f8a97; font-size: 10px; line-height: 1.6; }
+.education-panel { margin-top: 16px; }
+.education-list { display: grid; gap: 12px; }
+.education-row { display: flex; align-items: flex-start; gap: 13px; }
+.education-icon { background: #edf7f0; color: #528b64; }
+.education-row p { margin: 0 0 4px; color: #778391; font-size: 10px; }
+.education-row > div > span { color: #9aa3ae; font-size: 9px; }
 .achievement-icon { background: #fff7e9; color: #d29a37; width: 39px; height: 39px; border-radius: 11px; display: grid; place-items: center; }
 .achievement-copy { flex: 1; }
 .achievement-copy h4 { font-size: 12px; }
