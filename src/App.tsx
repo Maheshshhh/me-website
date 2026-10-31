@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createEmptyProfile, demoProfile, type Achievement, type Education, type Experience, type Profile, type Project, type View } from "./profile";
 import { supabase } from "./supabase";
 
 const appEnvironment = import.meta.env.VITE_APP_ENV ?? "development";
-const localResumeUrl = `${import.meta.env.BASE_URL}Mahesh_ReactJS_5+.pdf`;
-
 const navigation: { label: View; icon: string }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Personal details", icon: "user" },
@@ -13,7 +11,6 @@ const navigation: { label: View; icon: string }[] = [
   { label: "Skills", icon: "sparkles" },
   { label: "Achievements", icon: "award" },
   { label: "Projects & education", icon: "graduation" },
-  { label: "Resume", icon: "file" },
 ];
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
@@ -124,8 +121,6 @@ function App() {
   const [modal, setModal] = useState<"personal" | "experience" | "achievement" | null>(null);
   const [toast, setToast] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const pendingResumeCleanup = useRef(new Set<string>());
-
   useEffect(() => {
     if (!supabase) {
       try {
@@ -149,16 +144,6 @@ function App() {
           });
           if (error) throw error;
           setSaveStatus("All changes saved");
-          const obsoletePaths = [...pendingResumeCleanup.current].filter((path) => path !== profile.resumePath);
-          if (obsoletePaths.length) {
-            const { error: cleanupError } = await client.storage.from("resumes").remove(obsoletePaths);
-            if (cleanupError) {
-              console.error("Unable to remove previous resume files.", cleanupError);
-              setToast("Profile saved, but an older resume file couldn't be removed.");
-            } else {
-              obsoletePaths.forEach((path) => pendingResumeCleanup.current.delete(path));
-            }
-          }
         } catch (error) {
           console.error("Unable to save the profile to Supabase.", error);
           setSaveStatus("Save failed");
@@ -228,10 +213,6 @@ function App() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    pendingResumeCleanup.current.clear();
-  }, [authUser?.id]);
-
-  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2800);
     return () => window.clearTimeout(timer);
@@ -244,7 +225,6 @@ function App() {
       profile.experience.length > 0,
       profile.skills.length >= 3,
       profile.achievements.length > 0,
-      Boolean(profile.resumeName),
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [profile]);
@@ -340,75 +320,6 @@ function App() {
     showToast("Achievement added.");
   }
 
-  async function handleResume(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const file = event.currentTarget.files?.[0];
-    if (!file) return;
-    const supportedExtensions = [".pdf", ".doc", ".docx"];
-    if (!supportedExtensions.some((extension) => file.name.toLowerCase().endsWith(extension))) {
-      showToast("Choose a PDF or Word document.");
-      input.value = "";
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Choose a file smaller than 10 MB.");
-      input.value = "";
-      return;
-    }
-    if (!supabase || !authUser) {
-      updateProfile("resumeName", file.name);
-      updateProfile("resumePath", undefined);
-      showToast("Demo mode only — configure Supabase to upload this file.");
-      input.value = "";
-      return;
-    }
-
-    const extension = file.name.toLowerCase().split(".").pop() ?? "";
-    const contentTypes: Record<string, string> = {
-      pdf: "application/pdf",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    };
-    const safeName = file.name.replace(/[^\w.-]/g, "_");
-    const path = `${authUser.id}/${crypto.randomUUID()}-${safeName}`;
-    try {
-      const { error } = await supabase.storage.from("resumes").upload(path, file, {
-        contentType: contentTypes[extension],
-        upsert: false,
-      });
-      if (error) throw error;
-
-      if (profile.resumePath) pendingResumeCleanup.current.add(profile.resumePath);
-      updateProfile("resumeName", file.name);
-      updateProfile("resumePath", path);
-      showToast("Resume uploaded securely.");
-    } catch (error) {
-      console.error("Unable to upload the resume to Supabase.", error);
-      showToast("Resume upload failed. Check your connection and try again.");
-    } finally {
-      input.value = "";
-    }
-  }
-
-  async function downloadResume() {
-    if (!supabase || !profile.resumePath) {
-      showToast("Upload a resume to enable downloads.");
-      return;
-    }
-    try {
-      const { data, error } = await supabase.storage.from("resumes").createSignedUrl(profile.resumePath, 60);
-      if (error) throw error;
-      const link = document.createElement("a");
-      link.href = data.signedUrl;
-      link.download = profile.resumeName;
-      link.rel = "noopener noreferrer";
-      link.click();
-    } catch (error) {
-      console.error("Unable to create a resume download link.", error);
-      showToast("Resume download failed. Try again.");
-    }
-  }
-
   function copyProfileLink() {
     showToast("Public profile sharing isn't enabled yet.");
   }
@@ -425,8 +336,6 @@ function App() {
         return <AchievementsSection achievements={profile.achievements} onAdd={() => setModal("achievement")} onRemove={(index) => updateProfile("achievements", profile.achievements.filter((_, itemIndex) => itemIndex !== index))} />;
       case "Projects & education":
         return <ProjectsEducationSection projects={profile.projects} education={profile.education} />;
-      case "Resume":
-        return <ResumeSection profile={profile} onFile={handleResume} onDownload={downloadResume} canDownload={Boolean(supabase && profile.resumePath)} localResumeUrl={localResumeUrl} />;
       default:
         return (
           <Overview
@@ -512,11 +421,11 @@ function App() {
       {modal && (
         <Modal title={modal === "personal" ? "Edit personal details" : modal === "experience" ? "Add experience" : "Add achievement"} onClose={() => setModal(null)}>
           {modal === "personal" ? (
-            <form className="edit-form" onSubmit={(event) => { event.preventDefault(); const values = new FormData(event.currentTarget); updateProfile("name", String(values.get("name") ?? "").trim()); updateProfile("title", String(values.get("title") ?? "").trim()); updateProfile("location", String(values.get("location") ?? "").trim()); updateProfile("email", String(values.get("email") ?? "").trim()); updateProfile("phone", String(values.get("phone") ?? "").trim()); updateProfile("website", String(values.get("website") ?? "").trim()); updateProfile("summary", String(values.get("summary") ?? "").trim()); setModal(null); showToast("Your details have been updated."); }}>
+            <form className="edit-form" onSubmit={(event) => { event.preventDefault(); const values = new FormData(event.currentTarget); updateProfile("name", String(values.get("name") ?? "").trim()); updateProfile("title", String(values.get("title") ?? "").trim()); updateProfile("location", String(values.get("location") ?? "").trim()); updateProfile("email", String(values.get("email") ?? "").trim()); updateProfile("website", String(values.get("website") ?? "").trim()); updateProfile("summary", String(values.get("summary") ?? "").trim()); setModal(null); showToast("Your details have been updated."); }}>
               <label>Full name<input name="name" defaultValue={profile.name} required /></label>
               <label>Professional title<input name="title" defaultValue={profile.title} required /></label>
               <label>Location<input name="location" defaultValue={profile.location} /></label>
-              <div className="form-grid"><label>Email<input type="email" name="email" defaultValue={profile.email} /></label><label>Phone<input name="phone" defaultValue={profile.phone} /></label></div>
+              <label>Email<input type="email" name="email" defaultValue={profile.email} /></label>
               <label>Website<input name="website" defaultValue={profile.website} /></label>
               <label>About you<textarea name="summary" defaultValue={profile.summary} rows={4} maxLength={400} /></label>
               <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button className="button button-primary">Save details</button></div>
@@ -569,7 +478,7 @@ function AuthScreen({ error, message, busy, onSubmit }: {
           <button className="button button-primary auth-submit" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</button>
         </form>
         <p className="auth-switch">{mode === "signin" ? "New to Careerfolio?" : "Already have an account?"} <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
-        <p className="auth-privacy">Your profile and resume are private to your account.</p>
+        <p className="auth-privacy">Your profile details are private to your account.</p>
       </section>
     </main>
   );
@@ -624,15 +533,7 @@ function Overview({ profile, completion, onNavigate, onEdit, onCopy, onAddExperi
             <CompletionItem complete={profile.experience.length > 0} label="Work experience" onClick={() => onNavigate("Experience")} />
             <CompletionItem complete={profile.skills.length >= 3} label="Skills & expertise" onClick={() => onNavigate("Skills")} />
             <CompletionItem complete={profile.achievements.length > 0} label="Achievements" onClick={() => onNavigate("Achievements")} />
-            <CompletionItem complete={Boolean(profile.resumeName)} label="Resume" onClick={() => onNavigate("Resume")} />
           </div>
-        </section>
-
-        <section className="resume-card">
-          <div className="card-heading"><div><span className="eyebrow">YOUR RESUME</span><h3>Ready when you are</h3></div><span className="resume-file-icon"><Icon name="file" size={18} /></span></div>
-          <p className="card-muted">Keep your resume close and your next opportunity closer.</p>
-          <button className="resume-file" onClick={() => onNavigate("Resume")}><span className="pdf-badge">PDF</span><span className="file-name">{profile.resumeName}<small>Updated recently</small></span><Icon name="chevron" size={17} /></button>
-          <button className="text-link" onClick={() => onNavigate("Resume")}>Manage resume <Icon name="arrow" size={14} /></button>
         </section>
 
         <section className="experience-card">
@@ -667,7 +568,6 @@ function PersonalDetails({ profile, onEdit }: { profile: Profile; onEdit: () => 
         <div className="detail-divider" />
         <div className="detail-grid">
           <DetailItem label="EMAIL ADDRESS" value={profile.email} />
-          <DetailItem label="PHONE NUMBER" value={profile.phone || "Add a phone number"} />
           <DetailItem label="LOCATION" value={profile.location || "Add your location"} />
           <DetailItem label="WEBSITE" value={profile.website || "Add your website"} />
         </div>
@@ -748,23 +648,6 @@ function ProjectsEducationSection({ projects, education }: { projects: Project[]
             ))}
           </div>
         ) : <EmptyState title="Education will appear here" description="Add education details to your profile." />}
-      </section>
-    </>
-  );
-}
-
-function ResumeSection({ profile, onFile, onDownload, canDownload, localResumeUrl }: { profile: Profile; onFile: (event: ChangeEvent<HTMLInputElement>) => void; onDownload: () => void; canDownload: boolean; localResumeUrl: string }) {
-  return (
-    <>
-      <PageHeading eyebrow="YOUR EXPERIENCE, ON PAPER" title="Resume" description="Keep a current resume ready to share when the right opportunity appears." />
-      <section className="resume-page-card">
-        <div className="resume-page-top"><span className="resume-large-icon"><Icon name="file" size={24} /></span><div><span className="eyebrow">CURRENT RESUME</span><h3>{profile.resumeName || "No resume added yet"}</h3><p>PDF or Word document · Up to 10 MB</p></div></div>
-        <div className="resume-page-divider" />
-        <label className="button button-primary resume-upload-button"><Icon name="download" size={16} /> Choose a file<input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={onFile} /></label>
-        {canDownload
-          ? <button className="button button-outline resume-download-button" onClick={onDownload}><Icon name="download" size={16} /> Download resume</button>
-          : !supabase && profile.resumeName === demoProfile.resumeName && <a className="button button-outline resume-download-button" href={localResumeUrl} download="Mahesh_ReactJS_5+.pdf"><Icon name="download" size={16} /> Download resume</a>}
-        <p className="storage-note">{canDownload ? "Your resume is stored privately in your account." : !supabase && profile.resumeName === demoProfile.resumeName ? "This resume is included in the public site and can be downloaded by anyone." : "Demo files selected here aren't uploaded. Sign in with a connected Supabase project to store resumes privately."}</p>
       </section>
     </>
   );

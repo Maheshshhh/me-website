@@ -1,4 +1,4 @@
-export type View = "Overview" | "Personal details" | "Experience" | "Skills" | "Achievements" | "Projects & education" | "Resume";
+export type View = "Overview" | "Personal details" | "Experience" | "Skills" | "Achievements" | "Projects & education";
 
 export type Experience = {
   role: string;
@@ -48,7 +48,7 @@ export const demoProfile: Profile = {
   title: "React JS Developer",
   location: "Pune, India",
   email: "28mahesh7@gmail.com",
-  phone: "+91 8087497574",
+  phone: "",
   website: "linkedin.com/in/maheshshh",
   summary:
     "Senior Front End Developer with 5+ years of experience specializing in React.js. Strong expertise in UI/UX implementation, API integration, Redux state management, performance optimization, and responsive design. Currently working in investment banking, delivering production-ready solutions in Agile Scrum environments with cross-functional teams.",
@@ -120,7 +120,7 @@ export const demoProfile: Profile = {
       location: "Kopargaon, India",
     },
   ],
-  resumeName: "Mahesh_ReactJS_5+.pdf",
+  resumeName: "",
 };
 
 export function createEmptyProfile(email: string): Profile {
