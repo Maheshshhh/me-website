@@ -51,6 +51,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .topbar-actions { display: flex; align-items: center; gap: 19px; }
 .saved-status { display: flex; align-items: center; gap: 7px; color: #8994a0; font-size: 11px; }
 .saved-status > span, .live-dot { height: 7px; width: 7px; border-radius: 100%; background: #63bd8a; display: inline-block; }
+.environment-badge { border-radius: 12px; padding: 5px 8px; color: #596575; background: #eef1f5; font-size: 8px; letter-spacing: .7px; font-weight: 700; }
+.environment-development { color: #8d5b12; background: #fff3d8; }
+.environment-uat { color: #4a50a0; background: #ecebff; }
+.environment-production { color: #35784d; background: #e7f6ec; }
 .icon-button { border: 0; background: transparent; color: #808b98; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; }
 .icon-button:hover { background: #f3f4f6; }
 .notification-button { position: relative; }

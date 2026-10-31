@@ -1,43 +1,49 @@
 # Careerfolio
 
-A lightweight React + TypeScript professional-profile portal built with Vite. It supports a local demo mode and an optional Supabase prototype for email/password accounts, private per-user profile data, and private resume uploads.
+A lightweight React + TypeScript professional-profile portal built with Vite. It has three isolated configuration layers:
 
-## Run locally
+| Environment | Where it runs | Data/backend |
+| --- | --- | --- |
+| Development | Local machine only (`npm run dev`) | Demo profile in browser storage; Supabase is forcibly disabled |
+| UAT | GitHub Pages at `/me-website/uat/` | UAT branch and UAT GitHub Environment configuration |
+| Production | GitHub Pages at `/me-website/` | `main` branch and production GitHub Environment configuration |
+
+## Local development
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-Without Supabase settings, the app runs in demo mode and saves the example profile in this browser only. To use Supabase locally, copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the project URL and publishable/anon key. Then apply the SQL migration in `supabase/migrations/20261031000000_initial_profile.sql`.
+`.env.development` labels the local build. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. Local demo changes stay in that browser.
 
-Build and preview:
+## Build environments
 
 ```sh
-npm run build
-npm run preview
+npm run build:uat
+npm run build:production
 ```
 
-## Configure Supabase
+For local UAT/production previews, use the matching `.env.uat.example` or `.env.production.example` as a reference and create an ignored `.env.uat.local` or `.env.production.local`. Never commit project keys. `npm run build` is the production build.
 
-1. Create a Supabase project and enable email/password authentication.
-2. Apply the migration in `supabase/migrations/20261031000000_initial_profile.sql`.
-3. Configure the auth redirect/site URLs for the GitHub Pages URL.
-4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions **Variables** in the repository settings.
+## UAT and production deployment
 
-The browser uses only the Supabase publishable/anon key. Never put a service-role key in a `VITE_` variable or in GitHub Pages. Profile rows are keyed by the authenticated user ID and protected by row-level security. Resume files are stored in a private bucket with policies limiting access to the owner's folder; downloads use short-lived signed URLs.
+The GitHub Actions workflow builds both environments and publishes them together to GitHub Pages:
 
-## Deploy to GitHub Pages
+- Production: `https://maheshshhh.github.io/me-website/`
+- UAT: `https://maheshshhh.github.io/me-website/uat/`
 
-The workflow at `.github/workflows/deploy.yml` builds and deploys on pushes to `main`.
+The `main` branch is the production source. The `uat` branch is the testing source. Push changes to `uat` to update the UAT URL; after testing, merge the approved changes from `uat` into `main` to release them to production. Each deployment composes the latest `main` production build and latest `uat` build so one environment cannot overwrite the other.
 
-1. Push this project to a GitHub repository on the `main` branch.
-2. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
-3. Add the two Supabase Actions variables above. For demo mode, leave them unset.
-4. Push to `main` or run the workflow manually under **Actions**.
+In repository settings, configure GitHub Pages to use **GitHub Actions**. The workflow uses separate GitHub Actions Environments named `uat` and `production`. Add the following Actions **Variables** to each environment, using a distinct Supabase project for each:
 
-Vite's base path is set from the repository name by the workflow, so project Pages URLs load their assets correctly.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-## Tenant and scale boundary
+These are browser publishable/anon settings, not secrets. Never configure a Supabase service-role key in the frontend or as a `VITE_` variable. If an environment has no Supabase variables configured, it runs in demo mode.
 
-For this prototype, one authenticated user is one isolated profile tenant. Row-level security prevents users from reading or changing another user's profile or resume. This is a starting point, not a verified million-tenant production deployment: the GitHub Pages frontend and Supabase free tier have service limits, and this project has not been load-tested. Before a large launch, upgrade/size the backend, monitor and load-test expected traffic, review retention and backup policies, and plan rate limits and abuse controls.
+The Supabase migration at `supabase/migrations/20261031000000_initial_profile.sql` provides per-user row-level access and private resume storage. Apply it separately to both the UAT and production Supabase projects.
+
+## Scale boundary
+
+The UAT/production split prevents accidental data/config sharing but is not a guarantee of multi-million-tenant capacity. Size and load-test each backend environment, establish monitoring and backups, and review rate limits and data-retention requirements before a large launch.

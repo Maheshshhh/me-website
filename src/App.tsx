@@ -3,6 +3,8 @@ import type { User } from "@supabase/supabase-js";
 import { createEmptyProfile, demoProfile, type Achievement, type Experience, type Profile, type View } from "./profile";
 import { supabase } from "./supabase";
 
+const appEnvironment = import.meta.env.VITE_APP_ENV ?? "development";
+
 const navigation: { label: View; icon: string }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Personal details", icon: "user" },
@@ -469,6 +471,7 @@ function App() {
           <button className="mobile-menu" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Icon name="menu" /></button>
           <div className="breadcrumb"><span>My profile</span><Icon name="chevron" size={14} /><strong>{activeView}</strong></div>
           <div className="topbar-actions">
+            <span className={`environment-badge environment-${appEnvironment}`}>{appEnvironment.toUpperCase()}</span>
             <span className="saved-status"><span /> {saveStatus}</span>
             <button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("You're all caught up.")}><Icon name="bell" /></button>
             <button className="top-avatar" onClick={() => setActiveView("Personal details")} aria-label="Open personal details"><Avatar name={profile.name} small /></button>
