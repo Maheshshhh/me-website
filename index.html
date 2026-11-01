@@ -15,8 +15,10 @@
     <script>
       const route = new URLSearchParams(window.location.search).get("__route");
       if (route) {
+        const base = "%BASE_URL%";
         const target = new URL(route, window.location.origin);
-        window.history.replaceState(null, "", target.pathname + target.search + target.hash);
+        const routePath = target.pathname.replace(/^\/+/, "");
+        window.history.replaceState(null, "", `${base}${routePath}${target.search}${target.hash}`);
       }
     </script>
     <script type="module" src="/src/main.tsx"></script>
