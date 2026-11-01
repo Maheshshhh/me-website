@@ -15,7 +15,17 @@ npm ci
 npm run dev
 ```
 
+The local development server is available at `http://localhost:8080`.
+
 `.env.development` labels the local build. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. Local demo changes stay in that browser.
+
+## Tests
+
+```sh
+npm test
+```
+
+The unit tests cover profile defaults, saved-profile normalization, and local browser-storage loading.
 
 ## Build environments
 
