@@ -4,9 +4,11 @@ A lightweight React + TypeScript professional-profile portal built with Vite. It
 
 | Environment | Where it runs | Data/backend |
 | --- | --- | --- |
-| Development | Local machine only (`npm run dev`) | Demo profile in browser storage; Supabase is forcibly disabled |
-| UAT | GitHub Pages at `/me-website/uat/` | UAT branch and UAT GitHub Environment configuration |
-| Production | GitHub Pages at `/me-website/` | `main` branch and production GitHub Environment configuration |
+| Development | Local machine only (`npm run dev`) | Hardcoded demo profile |
+| UAT | GitHub Pages at `/me-website/uat/` | Read-only profiles from the UAT GitHub Environment configuration |
+| Production | GitHub Pages at `/me-website/` | Read-only profiles from the production GitHub Environment configuration |
+
+Profile content is view-only in the website: editing, adding, and removing profile data are disabled. The demo profile is loaded directly from the app and is not saved to browser storage. When Supabase is configured for UAT or production, the website can authenticate and read a profile but does not write profile changes.
 
 ## Local development
 
@@ -17,7 +19,7 @@ npm run dev
 
 The local development server is available at `http://localhost:8080`.
 
-`.env.development` labels the local build. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. Local demo changes stay in that browser.
+`.env.development` labels the local build. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override.
 
 ## Tests
 
@@ -25,7 +27,7 @@ The local development server is available at `http://localhost:8080`.
 npm test
 ```
 
-The unit tests cover profile defaults, saved-profile normalization, and local browser-storage loading.
+The unit tests cover profile defaults, saved-profile normalization, and route handling.
 
 ## Build environments
 

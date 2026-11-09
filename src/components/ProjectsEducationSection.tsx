@@ -22,7 +22,7 @@ export default function ProjectsEducationSection({ projects, education }: Projec
               </article>
             ))}
           </div>
-        ) : <EmptyState title="Projects will appear here" description="Add project experience to your profile." />}
+        ) : <EmptyState title="No projects listed" description="There are no projects to display." />}
       </section>
       <section className="section-panel education-panel">
         <div className="section-panel-heading"><div><h3>Education</h3><p>Your academic background.</p></div><span className="count-pill">{education.length} {education.length === 1 ? "qualification" : "qualifications"}</span></div>
@@ -35,7 +35,7 @@ export default function ProjectsEducationSection({ projects, education }: Projec
               </article>
             ))}
           </div>
-        ) : <EmptyState title="Education will appear here" description="Add education details to your profile." />}
+        ) : <EmptyState title="No education listed" description="There are no education entries to display." />}
       </section>
     </>
   );

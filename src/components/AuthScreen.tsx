@@ -21,7 +21,7 @@ export default function AuthScreen({ error, message, busy, onSubmit }: AuthScree
         </div>
         <div className="eyebrow">YOUR CAREER, IN ONE PLACE</div>
         <h1>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-        <p className="auth-description">{mode === "signin" ? "Sign in to pick up where you left off." : "Create a secure account to start building your profile."}</p>
+        <p className="auth-description">{mode === "signin" ? "Sign in to view your profile." : "Create a secure account to view your profile."}</p>
         <form className="edit-form auth-form" onSubmit={(event) => onSubmit(event, mode)}>
           <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
           <label>Password<input name="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} required /></label>

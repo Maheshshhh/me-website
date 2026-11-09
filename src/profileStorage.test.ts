@@ -1,11 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { demoProfile } from "./profile";
-import { loadDemoProfile, normalizeProfile } from "./profileStorage";
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
+import { normalizeProfile } from "./profileStorage";
 
 describe("normalizeProfile", () => {
   it.each([null, undefined, "profile", 42, [], ["profile"]])(
@@ -52,46 +47,5 @@ describe("normalizeProfile", () => {
 
     expect(profile.skills).toBe(demoProfile.skills);
     expect(profile.experience).toBe(demoProfile.experience);
-  });
-});
-
-describe("loadDemoProfile", () => {
-  it("returns the demo profile when browser storage has no saved profile", () => {
-    vi.stubGlobal("localStorage", { getItem: vi.fn().mockReturnValue(null) });
-
-    expect(loadDemoProfile()).toBe(demoProfile);
-    expect(localStorage.getItem).toHaveBeenCalledWith("careerfolio-profile-mahesh-v1");
-  });
-
-  it("loads and normalizes a saved profile", () => {
-    vi.stubGlobal("localStorage", {
-      getItem: vi.fn().mockReturnValue(JSON.stringify({ name: "Alex Morgan", skills: ["React"] })),
-    });
-
-    const profile = loadDemoProfile();
-
-    expect(profile.name).toBe("Alex Morgan");
-    expect(profile.skills).toEqual(["React"]);
-    expect(profile.experience).toEqual(demoProfile.experience);
-  });
-
-  it("logs invalid saved JSON and returns the demo profile", () => {
-    vi.stubGlobal("localStorage", { getItem: vi.fn().mockReturnValue("{invalid json") });
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    expect(loadDemoProfile()).toBe(demoProfile);
-    expect(error).toHaveBeenCalledWith("Unable to load the saved profile.", expect.any(SyntaxError));
-  });
-
-  it("logs unavailable browser storage and returns the demo profile", () => {
-    vi.stubGlobal("localStorage", {
-      getItem: vi.fn(() => {
-        throw new Error("Storage is unavailable");
-      }),
-    });
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    expect(loadDemoProfile()).toBe(demoProfile);
-    expect(error).toHaveBeenCalledWith("Unable to load the saved profile.", expect.any(Error));
   });
 });
