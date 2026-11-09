@@ -2,7 +2,7 @@ name: Deploy UAT and Production
 
 on:
   push:
-    branches: [main, uat]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

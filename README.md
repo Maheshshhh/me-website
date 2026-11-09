@@ -45,7 +45,7 @@ The GitHub Actions workflow builds both environments and publishes them together
 - Production: `https://maheshshhh.github.io/me-website/`
 - UAT: `https://maheshshhh.github.io/me-website/uat/`
 
-The `main` branch is the production source. The `uat` branch is the testing source. A push to either branch runs the combined deployment workflow: production is built from `main`, UAT from `uat`, and both are published together. A UAT-only push therefore leaves production's source unchanged while publishing the latest combined artifact. After testing, merge the approved changes from `uat` into `main` to release them to production. Each deployment composes the latest `main` production build and latest `uat` build so one environment cannot overwrite the other.
+The `main` branch is the production source. The `uat` branch is the testing source. A push to `main` publishes both the production build and the latest UAT build. To publish UAT-only changes before they are released, push to `uat`, then run **Deploy UAT and Production** manually from the `main` branch in GitHub Actions. After testing, merge the approved changes from `uat` into `main` to release them to production. Each deployment composes the latest `main` production build and latest `uat` build so one environment cannot overwrite the other.
 
 In repository settings, configure GitHub Pages to use **GitHub Actions**. The workflow uses separate GitHub Actions Environments named `uat` and `production`. Add the following Actions **Variables** to each environment, using a distinct Supabase project for each:
 
