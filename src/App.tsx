@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createEmptyProfile, demoProfile, type Profile, type View } from "./profile";
 import { supabase } from "./supabase";
+import { isValidLocalCredentials } from "./localAuth";
 import { normalizeProfile } from "./profileStorage";
-import { getPathnameForView, getViewFromPathname } from "./routes";
+import { getAuthPageFromPathname, getPathnameForAuthPage, getPathnameForView, getViewFromPathname, type AuthPage } from "./routes";
 import AchievementsSection from "./components/AchievementsSection";
-import AuthScreen, { type AuthMode } from "./components/AuthScreen";
+import AuthScreen from "./components/AuthScreen";
 import ExperienceSection from "./components/ExperienceSection";
 import Icon, { type IconName } from "./components/Icon";
 import LoadingScreen from "./components/LoadingScreen";
@@ -16,6 +17,7 @@ import { Avatar } from "./components/ProfileUi";
 import SkillsSection from "./components/SkillsSection";
 
 const appEnvironment = import.meta.env.VITE_APP_ENV ?? "development";
+const localAuthEnabled = import.meta.env.MODE === "development";
 const navigation: { label: View; icon: IconName }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Personal details", icon: "user" },
@@ -28,24 +30,52 @@ const navigation: { label: View; icon: IconName }[] = [
 function App() {
   const [profile, setProfile] = useState<Profile>(() => supabase ? createEmptyProfile("") : demoProfile);
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const [localAuthenticated, setLocalAuthenticated] = useState(false);
   const [authReady, setAuthReady] = useState(!supabase);
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [authPage, setAuthPage] = useState<AuthPage | null>(() =>
+    getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL),
+  );
   const [profileReady, setProfileReady] = useState(!supabase);
   const [profileError, setProfileError] = useState("");
   const [activeView, setActiveView] = useState<View>(() => getViewFromPathname(window.location.pathname, import.meta.env.BASE_URL));
   const [toast, setToast] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isAuthenticated = supabase ? Boolean(authUser) : localAuthenticated;
 
   useEffect(() => {
     function handlePopState() {
       setActiveView(getViewFromPathname(window.location.pathname, import.meta.env.BASE_URL));
+      setAuthPage(getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL));
     }
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (supabase && !authReady) return;
+
+    const currentAuthPage = getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL);
+    if (!isAuthenticated) {
+      if (!currentAuthPage || (localAuthEnabled && currentAuthPage !== "login")) {
+        window.history.replaceState(null, "", getPathnameForAuthPage("login", import.meta.env.BASE_URL));
+        setAuthPage("login");
+        setAuthError("");
+      } else if (authPage !== currentAuthPage) {
+        setAuthPage(currentAuthPage);
+      }
+      return;
+    }
+
+    if (authPage && authPage !== "reset-password") {
+      window.history.replaceState(null, "", getPathnameForView("Overview", import.meta.env.BASE_URL));
+      setActiveView("Overview");
+      setAuthPage(null);
+    }
+  }, [authReady, authPage, isAuthenticated]);
 
   function navigateToView(view: View) {
     const pathname = getPathnameForView(view, import.meta.env.BASE_URL);
@@ -53,17 +83,36 @@ function App() {
       window.history.pushState(null, "", pathname);
     }
     setActiveView(view);
+    setAuthPage(null);
+    setAuthError("");
+    setAuthMessage("");
   }
+
+  function navigateToAuthPage(page: AuthPage, replace = false) {
+    const pathname = getPathnameForAuthPage(page, import.meta.env.BASE_URL);
+    if (window.location.pathname !== pathname) {
+      if (replace) {
+        window.history.replaceState(null, "", pathname);
+      } else {
+        window.history.pushState(null, "", pathname);
+      }
+    }
+    setAuthPage(page);
+    setAuthError("");
+    setAuthMessage("");
+  }
+
   useEffect(() => {
     if (!supabase) return;
     let active = true;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       const nextUser = session?.user ?? null;
       setAuthUser(nextUser);
       setProfileError("");
       setProfileReady(!nextUser);
       if (!nextUser) setProfile(createEmptyProfile(""));
+      if (event === "PASSWORD_RECOVERY") navigateToAuthPage("reset-password");
     });
 
     void supabase.auth.getSession().then(({ data, error }) => {
@@ -133,9 +182,30 @@ function App() {
     setToast(message);
   }
 
-  async function handleAuth(event: FormEvent<HTMLFormElement>, mode: AuthMode) {
+  async function handleAuth(event: FormEvent<HTMLFormElement>, page: AuthPage) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase) {
+      if (!localAuthEnabled || page !== "login") {
+        setAuthError("Authentication is not available for this page in the current environment.");
+        return;
+      }
+      const form = new FormData(event.currentTarget);
+      const username = String(form.get("username") ?? "");
+      const password = String(form.get("password") ?? "");
+      if (!isValidLocalCredentials(
+        username,
+        password,
+        import.meta.env.VITE_LOCAL_AUTH_USERNAME ?? "",
+        import.meta.env.VITE_LOCAL_AUTH_PASSWORD ?? "",
+      )) {
+        setAuthError("Username or password is incorrect.");
+        return;
+      }
+      setLocalAuthenticated(true);
+      setProfile(demoProfile);
+      navigateToView("Overview");
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
@@ -143,18 +213,40 @@ function App() {
     setAuthError("");
     setAuthMessage("");
     try {
-      const result = mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
+      if (page === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigateToView("Overview");
+      } else if (page === "signup") {
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).href,
+            emailRedirectTo: new URL(getPathnameForView("Overview", import.meta.env.BASE_URL), window.location.origin).href,
           },
         });
-      if (result.error) throw result.error;
-      if (mode === "signup" && !result.data.session) {
-        setAuthMessage("Check your email to confirm your account, then sign in.");
+        if (error) throw error;
+        if (!data.session) {
+          setAuthMessage("Check your email to confirm your account, then sign in.");
+        } else {
+          navigateToView("Overview");
+        }
+      } else if (page === "forgot-password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: new URL(getPathnameForAuthPage("reset-password", import.meta.env.BASE_URL), window.location.origin).href,
+        });
+        if (error) throw error;
+        setAuthMessage("If an account exists for that email, a password reset link is on its way.");
+      } else {
+        const confirmPassword = String(form.get("confirmPassword") ?? "");
+        if (password !== confirmPassword) {
+          setAuthError("The passwords do not match.");
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setAuthMessage("Your password has been updated.");
+        navigateToView("Overview");
       }
     } catch (error) {
       console.error("Supabase authentication failed.", error);
@@ -165,10 +257,16 @@ function App() {
   }
 
   async function handleSignOut() {
-    if (!supabase) return;
+    if (!supabase) {
+      setLocalAuthenticated(false);
+      setProfile(demoProfile);
+      navigateToAuthPage("login", true);
+      return;
+    }
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      navigateToAuthPage("login");
     } catch (error) {
       console.error("Unable to sign out of Supabase.", error);
       showToast("Unable to sign out. Try again.");
@@ -206,8 +304,33 @@ function App() {
   if (supabase && !authReady) {
     return <LoadingScreen message="Connecting to your account…" />;
   }
-  if (supabase && !authUser) {
-    return <AuthScreen error={authError} message={authMessage} busy={authBusy} onSubmit={handleAuth} />;
+  if (!isAuthenticated) {
+    return (
+      <AuthScreen
+        page={authPage ?? "login"}
+        configured={Boolean(supabase) || localAuthEnabled}
+        localMode={localAuthEnabled}
+        error={authError}
+        message={authMessage}
+        busy={authBusy}
+        onNavigate={navigateToAuthPage}
+        onSubmit={handleAuth}
+      />
+    );
+  }
+  if (authPage === "reset-password") {
+    return (
+      <AuthScreen
+        page={authPage}
+        configured={Boolean(supabase)}
+        localMode={false}
+        error={authError}
+        message={authMessage}
+        busy={authBusy}
+        onNavigate={navigateToAuthPage}
+        onSubmit={handleAuth}
+      />
+    );
   }
   if (supabase && authUser && profileError) {
     return <LoadingScreen message={profileError} action="Retry" onAction={() => window.location.reload()} />;
@@ -246,7 +369,7 @@ function App() {
             <span className="account-name">{profile.name}<small>{supabase ? authUser?.email : "Personal account"}</small></span>
             <span className="account-more">···</span>
           </button>
-          {supabase && <button className="logout-button" onClick={handleSignOut}>Sign out</button>}
+          {(supabase || localAuthEnabled) && <button className="logout-button" onClick={handleSignOut}>Sign out</button>}
         </div>
       </aside>
 
