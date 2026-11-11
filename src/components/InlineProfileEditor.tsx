@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { Achievement, Education, Experience, Profile, Project, View } from "../profile";
+import AiTextField, { type AiWritingKind } from "./AiTextField";
 
 type InlineProfileEditorProps = {
   section: View;
@@ -7,6 +8,7 @@ type InlineProfileEditorProps = {
   busy: boolean;
   error: string;
   onSave: (profile: Profile) => Promise<void>;
+  onImproveText: (kind: AiWritingKind, text: string) => Promise<string>;
   onCancel: () => void;
 };
 
@@ -41,7 +43,7 @@ function Entry({ title, children, onRemove }: { title: string; children: ReactNo
   );
 }
 
-export default function InlineProfileEditor({ section, profile: initialProfile, busy, error, onSave, onCancel }: InlineProfileEditorProps) {
+export default function InlineProfileEditor({ section, profile: initialProfile, busy, error, onSave, onImproveText, onCancel }: InlineProfileEditorProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [formError, setFormError] = useState("");
 
@@ -69,7 +71,7 @@ export default function InlineProfileEditor({ section, profile: initialProfile, 
           <Field label="Full name" value={profile.name} required onChange={(value) => updateField("name", value)} />
           <Field label="Professional headline" value={profile.title} onChange={(value) => updateField("title", value)} />
           <Field label="Location" value={profile.location} onChange={(value) => updateField("location", value)} />
-          <Field label="Professional summary" multiline value={profile.summary} onChange={(value) => updateField("summary", value)} />
+          <AiTextField label="Professional summary" kind="summary" rows={4} maxLength={5000} value={profile.summary} onChange={(value) => updateField("summary", value)} onImprove={onImproveText} />
         </>
       );
       break;
@@ -83,7 +85,7 @@ export default function InlineProfileEditor({ section, profile: initialProfile, 
           <Field label="Location" value={profile.location} onChange={(value) => updateField("location", value)} />
           <Field label="Website or LinkedIn" value={profile.website} onChange={(value) => updateField("website", value)} />
           <label>Phone number <span className="editor-help">(private; not shown in public previews)</span><input type="tel" maxLength={40} value={profile.phone} onChange={(event) => updateField("phone", event.target.value)} /></label>
-          <Field label="Professional summary" multiline value={profile.summary} onChange={(value) => updateField("summary", value)} />
+          <AiTextField label="Professional summary" kind="summary" rows={4} maxLength={5000} value={profile.summary} onChange={(value) => updateField("summary", value)} onImprove={onImproveText} />
         </>
       );
       break;
@@ -97,7 +99,7 @@ export default function InlineProfileEditor({ section, profile: initialProfile, 
               <Field label="Job title" value={item.role} onChange={(value) => updateField("experience", updateItem<Experience>(profile.experience, index, { role: value }))} />
               <Field label="Company" value={item.company} onChange={(value) => updateField("experience", updateItem<Experience>(profile.experience, index, { company: value }))} />
               <Field label="Dates" value={item.dates} onChange={(value) => updateField("experience", updateItem<Experience>(profile.experience, index, { dates: value }))} />
-              <Field label="Highlights" multiline value={item.description} onChange={(value) => updateField("experience", updateItem<Experience>(profile.experience, index, { description: value }))} />
+              <AiTextField label="Highlights" kind="experience" rows={4} maxLength={3000} value={item.description} onChange={(value) => updateField("experience", updateItem<Experience>(profile.experience, index, { description: value }))} onImprove={onImproveText} />
             </Entry>
           ))}
           {!profile.experience.length && <p className="editor-empty">No roles added yet.</p>}

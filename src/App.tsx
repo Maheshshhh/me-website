@@ -4,6 +4,7 @@ import { createEmptyProfile, demoProfile, type Profile, type View } from "./prof
 import { supabase } from "./supabase";
 import { isValidLocalCredentials } from "./localAuth";
 import { normalizeProfile } from "./profileStorage";
+import { improveProfileText } from "./aiWriting";
 import { toRecruiterProfile, type RecruiterProfile } from "./profileSharing";
 import {
   getAuthPageFromPathname,
@@ -530,6 +531,7 @@ function App() {
           busy={profileSaveBusy}
           error={profileSaveError}
           onSave={(nextProfile) => handleSaveProfile(nextProfile, true)}
+          onImproveText={improveProfileText}
           onCancel={() => {
             setProfileSaveError("");
             setInlineEditingView(null);
@@ -642,6 +644,7 @@ function App() {
           firstTime
           cancelLabel="Sign out"
           onSave={handleSaveProfile}
+          onImproveText={improveProfileText}
           onUploadResume={handleUploadResume}
           onCancel={() => void handleSignOut()}
         />
@@ -707,6 +710,7 @@ function App() {
                 firstTime={false}
                 cancelLabel="Cancel"
                 onSave={handleSaveProfile}
+                onImproveText={improveProfileText}
                 onUploadResume={handleUploadResume}
                 onCancel={() => { setProfileSaveError(""); setEditingProfile(false); }}
               />

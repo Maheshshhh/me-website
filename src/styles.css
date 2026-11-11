@@ -315,6 +315,13 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .dashboard-profile-editor { width: 100%; margin: 0; padding: 8px 0 52px; }
 .editor-page .page-heading { align-items: flex-start; }
 .page-heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-text-field { min-width: 0; }
+.ai-improve-button { margin-top: 8px; height: 31px; font-size: 10px; }
+.ai-privacy-note { margin: 6px 0 0; color: #929ca7; font-size: 10px; line-height: 1.5; }
+.ai-suggestion { margin-top: 12px; padding: 12px; border: 1px solid #e6e2fc; border-radius: 8px; background: #f8f7ff; }
+.ai-suggestion label { display: block; color: #5f6b78; font-size: 11px; font-weight: 600; }
+.ai-suggestion textarea { display: block; width: 100%; margin-top: 6px; border: 1px solid #e2e6eb; color: #354151; border-radius: 7px; padding: 10px 11px; background: #fff; font-size: 12px; outline: none; resize: vertical; line-height: 1.55; }
+.ai-suggestion-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 9px; }
 .inline-profile-editor { margin-bottom: 20px; }
 .inline-profile-editor .editor-entry { grid-column: 1 / -1; }
 .inline-editor-list-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }

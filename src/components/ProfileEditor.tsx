@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Achievement, Education, Profile, Project } from "../profile";
+import AiTextField, { type AiWritingKind } from "./AiTextField";
 import { PageHeading } from "./ProfileUi";
 
 type ResumeFile = { resumePath: string; resumeName: string };
@@ -11,6 +12,7 @@ type ProfileEditorProps = {
   firstTime: boolean;
   cancelLabel: string;
   onSave: (profile: Profile) => Promise<void>;
+  onImproveText: (kind: AiWritingKind, text: string) => Promise<string>;
   onUploadResume: (file: File) => Promise<ResumeFile>;
   onCancel: () => void;
 };
@@ -26,6 +28,7 @@ export default function ProfileEditor({
   firstTime,
   cancelLabel,
   onSave,
+  onImproveText,
   onUploadResume,
   onCancel,
 }: ProfileEditorProps) {
@@ -81,7 +84,7 @@ export default function ProfileEditor({
             <label>Location<input maxLength={120} placeholder="City, Country" value={profile.location} onChange={(event) => updateField("location", event.target.value)} /></label>
             <label>Website or LinkedIn<input maxLength={2048} placeholder="linkedin.com/in/yourname" value={profile.website} onChange={(event) => updateField("website", event.target.value)} /></label>
             <label>Phone number <span className="editor-help">(private; not shown in public previews)</span><input type="tel" maxLength={40} value={profile.phone} onChange={(event) => updateField("phone", event.target.value)} /></label>
-            <label className="editor-full">Professional summary<textarea rows={5} maxLength={5000} placeholder="Summarize your experience, strengths, and the work you enjoy." value={profile.summary} onChange={(event) => updateField("summary", event.target.value)} /></label>
+            <AiTextField label="Professional summary" kind="summary" rows={5} maxLength={5000} value={profile.summary} onChange={(value) => updateField("summary", value)} onImprove={onImproveText} />
           </div>
         </section>
 
@@ -100,7 +103,7 @@ export default function ProfileEditor({
                 <label>Job title<input maxLength={160} value={item.role} onChange={(event) => updateField("experience", updateItem(profile.experience, index, { role: event.target.value }))} /></label>
                 <label>Company<input maxLength={160} value={item.company} onChange={(event) => updateField("experience", updateItem(profile.experience, index, { company: event.target.value }))} /></label>
                 <label>Dates<input maxLength={100} placeholder="Jan 2022 – Present" value={item.dates} onChange={(event) => updateField("experience", updateItem(profile.experience, index, { dates: event.target.value }))} /></label>
-                <label className="editor-full">Highlights<textarea rows={3} maxLength={3000} value={item.description} onChange={(event) => updateField("experience", updateItem(profile.experience, index, { description: event.target.value }))} /></label>
+                <AiTextField label="Highlights" kind="experience" rows={3} maxLength={3000} value={item.description} onChange={(value) => updateField("experience", updateItem(profile.experience, index, { description: value }))} onImprove={onImproveText} />
               </div>
             </fieldset>
           ))}

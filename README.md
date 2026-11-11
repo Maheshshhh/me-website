@@ -61,6 +61,25 @@ Apply the migrations in order to both the UAT and production Supabase projects:
 
 The existing profile RLS rules restrict profile reads and writes to the authenticated owner. The public RPC returns only an explicit allowlist of recruiter profile fields. Share links use unguessable UUID tokens; anyone who has the link can see the profile email and download the resume, so share only with intended recipients. Disabling sharing makes both the page and resume unavailable.
 
+## AI writing assistant
+
+The profile editor can request an AI rewrite of a professional summary or work-experience highlights. Only the text in the selected field is sent to Google Gemini; suggestions are editable and are not saved until the user applies them and saves the profile. Authenticated users are limited to 10 requests per hour. Gemini's free-tier availability and quotas are controlled by Google and may change.
+
+To enable AI separately in UAT and production:
+
+1. Apply `supabase/migrations/20261111222000_ai_profile_writing.sql` to that environment's Supabase project.
+2. Obtain a Gemini API key through Google AI Studio. In that project's Supabase Dashboard, add it as the `GEMINI_API_KEY` Edge Function secret. Never put it in the frontend or a `VITE_` variable.
+3. Link the Supabase CLI to the intended project and deploy the function:
+
+   ```sh
+   supabase link --project-ref <project-ref>
+   supabase functions deploy improve-profile-text
+   ```
+
+   Optionally set `GEMINI_MODEL` to a Gemini model enabled for that API key. The function defaults to `gemini-2.5-flash`. To allow additional browser origins, set `AI_ALLOWED_ORIGINS` to a comma-separated list of exact origins; the GitHub Pages origin is allowed by default.
+
+Repeat these steps for the other Supabase project. AI suggestions are not available in local development mode.
+
 When configuring Supabase Authentication, set the Site URL to the matching site root. Add these URLs to the allowed redirect URLs for each project:
 
 - `https://maheshshhh.github.io/me-website/`
