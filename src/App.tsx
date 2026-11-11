@@ -150,9 +150,9 @@ function App() {
       if (!active) return;
       const nextUser = session?.user ?? null;
       setAuthUser(nextUser);
-      setProfileError("");
-      setProfileReady(!nextUser);
       if (!nextUser) {
+        setProfileError("");
+        setProfileReady(true);
         setProfile(createEmptyProfile(""));
         setProfileExists(false);
         setShareToken("");
@@ -183,6 +183,7 @@ function App() {
     if (!supabase || !authUser) return;
     let active = true;
     setProfileReady(false);
+    setProfileError("");
 
     void (async () => {
       try {
