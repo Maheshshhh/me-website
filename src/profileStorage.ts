@@ -1,4 +1,4 @@
-import { demoProfile, type Profile } from "./profile";
+import type { Profile } from "./profile";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -55,14 +55,4 @@ export function normalizeProfile(value: unknown, fallback: Profile): Profile {
     resumeName: text("resumeName", fallback.resumeName),
     resumePath: text("resumePath", fallback.resumePath ?? ""),
   };
-}
-
-export function loadDemoProfile(): Profile {
-  try {
-    const saved = localStorage.getItem("careerfolio-profile-mahesh-v1");
-    return saved ? normalizeProfile(JSON.parse(saved), demoProfile) : demoProfile;
-  } catch (error) {
-    console.error("Unable to load the saved profile.", error);
-    return demoProfile;
-  }
 }

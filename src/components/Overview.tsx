@@ -6,21 +6,18 @@ type OverviewProps = {
   profile: Profile;
   completion: number;
   onNavigate: (view: View) => void;
-  onEdit: () => void;
   onCopy: () => void;
-  onAddExperience: () => void;
 };
 
-export default function Overview({ profile, completion, onNavigate, onEdit, onCopy, onAddExperience }: OverviewProps) {
+export default function Overview({ profile, completion, onNavigate, onCopy }: OverviewProps) {
   return (
     <>
       <PageHeading eyebrow="YOUR CAREER, AT A GLANCE" title={`Good morning, ${profile.name.split(" ")[0] || "there"}`} description="A little progress today can open a big door tomorrow." action={<button className="button button-outline" onClick={onCopy}><Icon name="link" size={16} /> Share profile</button>} />
       <section className="profile-hero">
-        <div className="hero-top"><div className="hero-label"><span className="live-dot" /> YOUR PROFESSIONAL PROFILE</div><button className="icon-button hero-edit" aria-label="Edit profile" onClick={onEdit}><Icon name="edit" size={17} /></button></div>
+        <div className="hero-top"><div className="hero-label"><span className="live-dot" /> YOUR PROFESSIONAL PROFILE</div></div>
         <div className="hero-person">
           <Avatar name={profile.name} />
           <div className="hero-info"><h2>{profile.name}</h2><p>{profile.title} <span>·</span> {profile.location}</p><div className="hero-contact"><span>{profile.email}</span><span className="contact-divider" /> <span>{profile.website}</span></div></div>
-          <button className="button button-light" onClick={onEdit}><Icon name="edit" size={15} /> Edit profile</button>
         </div>
         <div className="hero-bottom">
           <p>{profile.summary}</p>
@@ -46,15 +43,14 @@ export default function Overview({ profile, completion, onNavigate, onEdit, onCo
           <div className="section-card-heading"><div><span className="eyebrow">THE JOURNEY SO FAR</span><h3>Experience</h3></div><button className="text-link" onClick={() => onNavigate("Experience")}>See all <Icon name="arrow" size={14} /></button></div>
           <div className="timeline compact-timeline">
             {profile.experience.slice(0, 2).map((item, index) => <div className="timeline-item" key={`${item.company}-${index}`}><span className="timeline-marker" /><div><div className="experience-title-row"><h4>{item.role}</h4><span className="date-label">{item.dates}</span></div><p className="company-line">{item.company}</p></div></div>)}
-            {profile.experience.length === 0 && <p className="empty-note">Add your first role to bring your journey to life.</p>}
+            {profile.experience.length === 0 && <p className="empty-note">No experience entries are available.</p>}
           </div>
-          <button className="add-inline" onClick={onAddExperience}><Icon name="plus" size={15} /> Add experience</button>
         </section>
 
         <section className="skills-card">
-          <div className="section-card-heading"><div><span className="eyebrow">WHAT YOU BRING</span><h3>Skills & expertise</h3></div><button className="text-link" onClick={() => onNavigate("Skills")}>Manage <Icon name="arrow" size={14} /></button></div>
+          <div className="section-card-heading"><div><span className="eyebrow">WHAT YOU BRING</span><h3>Skills & expertise</h3></div><button className="text-link" onClick={() => onNavigate("Skills")}>See all <Icon name="arrow" size={14} /></button></div>
           <div className="skill-list">{profile.skills.slice(0, 6).map((skill) => <span className="skill-chip" key={skill}>{skill}</span>)}</div>
-          {profile.skills.length === 0 && <p className="empty-note">Add skills that show what you do best.</p>}
+          {profile.skills.length === 0 && <p className="empty-note">No skills are available.</p>}
         </section>
       </div>
     </>

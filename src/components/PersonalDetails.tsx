@@ -1,11 +1,10 @@
 import type { Profile } from "../profile";
-import Icon from "./Icon";
 import { Avatar, DetailItem, PageHeading } from "./ProfileUi";
 
-export default function PersonalDetails({ profile, onEdit }: { profile: Profile; onEdit: () => void }) {
+export default function PersonalDetails({ profile }: { profile: Profile }) {
   return (
     <>
-      <PageHeading eyebrow="GET TO KNOW YOU" title="Personal details" description="The essentials that help people put a name to your work." action={<button className="button button-primary" onClick={onEdit}><Icon name="edit" size={16} /> Edit details</button>} />
+      <PageHeading eyebrow="GET TO KNOW YOU" title="Personal details" description="The essentials that help people put a name to your work." />
       <section className="detail-card">
         <div className="detail-profile"><Avatar name={profile.name} /><div><h2>{profile.name}</h2><p>{profile.title}</p></div><span className="profile-status"><span className="live-dot" /> Profile active</span></div>
         <div className="detail-divider" />

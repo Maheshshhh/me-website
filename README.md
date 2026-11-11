@@ -4,9 +4,11 @@ A lightweight React + TypeScript professional-profile portal built with Vite. It
 
 | Environment | Where it runs | Data/backend |
 | --- | --- | --- |
-| Development | Local machine only (`npm run dev`) | Demo profile in browser storage; Supabase is forcibly disabled |
-| UAT | GitHub Pages at `/me-website/uat/` | UAT branch and UAT GitHub Environment configuration |
-| Production | GitHub Pages at `/me-website/` | `main` branch and production GitHub Environment configuration |
+| Development | Local machine only (`npm run dev`) | Hardcoded local test account and demo profile |
+| UAT | GitHub Pages at `/me-website/uat/` | Read-only profiles from the UAT GitHub Environment configuration |
+| Production | GitHub Pages at `/me-website/` | Read-only profiles from the production GitHub Environment configuration |
+
+Profile content is view-only in the website: editing, adding, and removing profile data are disabled. The demo profile is loaded directly from the app and is not saved to browser storage. When Supabase is configured for UAT or production, the website can authenticate and read a profile but does not write profile changes.
 
 ## Local development
 
@@ -17,7 +19,7 @@ npm run dev
 
 The local development server is available at `http://localhost:8080`.
 
-`.env.development` labels the local build. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. Local demo changes stay in that browser.
+`.env.development` labels the local build. The local-only test account is configured in the ignored `.env.development.local` file with `VITE_LOCAL_AUTH_USERNAME` and `VITE_LOCAL_AUTH_PASSWORD`. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. The local account is only a development gate, not production authentication.
 
 ## Tests
 
@@ -25,7 +27,7 @@ The local development server is available at `http://localhost:8080`.
 npm test
 ```
 
-The unit tests cover profile defaults, saved-profile normalization, and local browser-storage loading.
+The unit tests cover profile defaults, saved-profile normalization, and route handling.
 
 ## Build environments
 
@@ -53,6 +55,17 @@ In repository settings, configure GitHub Pages to use **GitHub Actions**. The wo
 These are browser publishable/anon settings, not secrets. Never configure a Supabase service-role key in the frontend or as a `VITE_` variable. If an environment has no Supabase variables configured, it runs in demo mode.
 
 The Supabase migration at `supabase/migrations/20261031000000_initial_profile.sql` provides per-user row-level access and private resume storage. Apply it separately to both the UAT and production Supabase projects.
+
+When configuring Supabase Authentication, set the Site URL to the matching site root. Add these URLs to the allowed redirect URLs for each project:
+
+- `https://maheshshhh.github.io/me-website/`
+- `https://maheshshhh.github.io/me-website/login`
+- `https://maheshshhh.github.io/me-website/reset-password`
+- `https://maheshshhh.github.io/me-website/uat/`
+- `https://maheshshhh.github.io/me-website/uat/login`
+- `https://maheshshhh.github.io/me-website/uat/reset-password`
+
+Email/password sign-in, sign-up, email confirmation, and password recovery are supported. Profile data remains read-only in the website.
 
 The resume and mobile number are currently hidden from the profile, and the resume file is excluded from new GitHub Pages builds. Earlier public commits may still contain both in Git history; removing them from the current site does not remove previously accessible copies.
 

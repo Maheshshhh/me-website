@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
-import { createEmptyProfile, type Achievement, type Experience, type Profile, type View } from "./profile";
+import { createEmptyProfile, demoProfile, type Profile, type View } from "./profile";
 import { supabase } from "./supabase";
-import { loadDemoProfile, normalizeProfile } from "./profileStorage";
-import { getPathnameForView, getViewFromPathname } from "./routes";
+import { isValidLocalCredentials } from "./localAuth";
+import { normalizeProfile } from "./profileStorage";
+import { getAuthPageFromPathname, getPathnameForAuthPage, getPathnameForView, getViewFromPathname, type AuthPage } from "./routes";
 import AchievementsSection from "./components/AchievementsSection";
-import AuthScreen, { type AuthMode } from "./components/AuthScreen";
+import AuthScreen from "./components/AuthScreen";
 import ExperienceSection from "./components/ExperienceSection";
 import Icon, { type IconName } from "./components/Icon";
 import LoadingScreen from "./components/LoadingScreen";
-import Modal from "./components/Modal";
 import Overview from "./components/Overview";
 import PersonalDetails from "./components/PersonalDetails";
 import ProjectsEducationSection from "./components/ProjectsEducationSection";
@@ -17,6 +17,7 @@ import { Avatar } from "./components/ProfileUi";
 import SkillsSection from "./components/SkillsSection";
 
 const appEnvironment = import.meta.env.VITE_APP_ENV ?? "development";
+const localAuthEnabled = import.meta.env.MODE === "development";
 const navigation: { label: View; icon: IconName }[] = [
   { label: "Overview", icon: "grid" },
   { label: "Personal details", icon: "user" },
@@ -27,28 +28,54 @@ const navigation: { label: View; icon: IconName }[] = [
 ];
 
 function App() {
-  const [profile, setProfile] = useState<Profile>(() => supabase ? createEmptyProfile("") : loadDemoProfile());
+  const [profile, setProfile] = useState<Profile>(() => supabase ? createEmptyProfile("") : demoProfile);
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const [localAuthenticated, setLocalAuthenticated] = useState(false);
   const [authReady, setAuthReady] = useState(!supabase);
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [authPage, setAuthPage] = useState<AuthPage | null>(() =>
+    getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL),
+  );
   const [profileReady, setProfileReady] = useState(!supabase);
   const [profileError, setProfileError] = useState("");
-  const [saveStatus, setSaveStatus] = useState(supabase ? "Connecting…" : "Demo data · saved locally");
   const [activeView, setActiveView] = useState<View>(() => getViewFromPathname(window.location.pathname, import.meta.env.BASE_URL));
-  const [modal, setModal] = useState<"personal" | "experience" | "achievement" | null>(null);
   const [toast, setToast] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isAuthenticated = supabase ? Boolean(authUser) : localAuthenticated;
 
   useEffect(() => {
     function handlePopState() {
       setActiveView(getViewFromPathname(window.location.pathname, import.meta.env.BASE_URL));
+      setAuthPage(getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL));
     }
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (supabase && !authReady) return;
+
+    const currentAuthPage = getAuthPageFromPathname(window.location.pathname, import.meta.env.BASE_URL);
+    if (!isAuthenticated) {
+      if (!currentAuthPage || (localAuthEnabled && currentAuthPage !== "login")) {
+        window.history.replaceState(null, "", getPathnameForAuthPage("login", import.meta.env.BASE_URL));
+        setAuthPage("login");
+        setAuthError("");
+      } else if (authPage !== currentAuthPage) {
+        setAuthPage(currentAuthPage);
+      }
+      return;
+    }
+
+    if (authPage && authPage !== "reset-password") {
+      window.history.replaceState(null, "", getPathnameForView("Overview", import.meta.env.BASE_URL));
+      setActiveView("Overview");
+      setAuthPage(null);
+    }
+  }, [authReady, authPage, isAuthenticated]);
 
   function navigateToView(view: View) {
     const pathname = getPathnameForView(view, import.meta.env.BASE_URL);
@@ -56,50 +83,36 @@ function App() {
       window.history.pushState(null, "", pathname);
     }
     setActiveView(view);
+    setAuthPage(null);
+    setAuthError("");
+    setAuthMessage("");
   }
-  useEffect(() => {
-    if (!supabase) {
-      try {
-        localStorage.setItem("careerfolio-profile-mahesh-v1", JSON.stringify(profile));
-      } catch (error) {
-        console.error("Unable to save the profile in browser storage.", error);
-        setToast("Changes couldn't be saved in this browser.");
-      }
-      return;
-    }
-    const client = supabase;
-    if (!client || !authUser || !profileReady) return;
 
-    setSaveStatus("Saving…");
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const { error } = await client.from("profiles").upsert({
-            user_id: authUser.id,
-            profile_data: profile,
-          });
-          if (error) throw error;
-          setSaveStatus("All changes saved");
-        } catch (error) {
-          console.error("Unable to save the profile to Supabase.", error);
-          setSaveStatus("Save failed");
-          setToast("Your changes couldn't be saved. Check your connection and try again.");
-        }
-      })();
-    }, 450);
-    return () => window.clearTimeout(timer);
-  }, [profile, authUser, profileReady]);
+  function navigateToAuthPage(page: AuthPage, replace = false) {
+    const pathname = getPathnameForAuthPage(page, import.meta.env.BASE_URL);
+    if (window.location.pathname !== pathname) {
+      if (replace) {
+        window.history.replaceState(null, "", pathname);
+      } else {
+        window.history.pushState(null, "", pathname);
+      }
+    }
+    setAuthPage(page);
+    setAuthError("");
+    setAuthMessage("");
+  }
 
   useEffect(() => {
     if (!supabase) return;
     let active = true;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       const nextUser = session?.user ?? null;
       setAuthUser(nextUser);
       setProfileError("");
       setProfileReady(!nextUser);
       if (!nextUser) setProfile(createEmptyProfile(""));
+      if (event === "PASSWORD_RECOVERY") navigateToAuthPage("reset-password");
     });
 
     void supabase.auth.getSession().then(({ data, error }) => {
@@ -165,17 +178,34 @@ function App() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [profile]);
 
-  function updateProfile<K extends keyof Profile>(key: K, value: Profile[K]) {
-    setProfile((current) => ({ ...current, [key]: value }));
-  }
-
   function showToast(message: string) {
     setToast(message);
   }
 
-  async function handleAuth(event: FormEvent<HTMLFormElement>, mode: AuthMode) {
+  async function handleAuth(event: FormEvent<HTMLFormElement>, page: AuthPage) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase) {
+      if (!localAuthEnabled || page !== "login") {
+        setAuthError("Authentication is not available for this page in the current environment.");
+        return;
+      }
+      const form = new FormData(event.currentTarget);
+      const username = String(form.get("username") ?? "");
+      const password = String(form.get("password") ?? "");
+      if (!isValidLocalCredentials(
+        username,
+        password,
+        import.meta.env.VITE_LOCAL_AUTH_USERNAME ?? "",
+        import.meta.env.VITE_LOCAL_AUTH_PASSWORD ?? "",
+      )) {
+        setAuthError("Username or password is incorrect.");
+        return;
+      }
+      setLocalAuthenticated(true);
+      setProfile(demoProfile);
+      navigateToView("Overview");
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
@@ -183,12 +213,40 @@ function App() {
     setAuthError("");
     setAuthMessage("");
     try {
-      const result = mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
-      if (result.error) throw result.error;
-      if (mode === "signup" && !result.data.session) {
-        setAuthMessage("Check your email to confirm your account, then sign in.");
+      if (page === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigateToView("Overview");
+      } else if (page === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: new URL(getPathnameForView("Overview", import.meta.env.BASE_URL), window.location.origin).href,
+          },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          setAuthMessage("Check your email to confirm your account, then sign in.");
+        } else {
+          navigateToView("Overview");
+        }
+      } else if (page === "forgot-password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: new URL(getPathnameForAuthPage("reset-password", import.meta.env.BASE_URL), window.location.origin).href,
+        });
+        if (error) throw error;
+        setAuthMessage("If an account exists for that email, a password reset link is on its way.");
+      } else {
+        const confirmPassword = String(form.get("confirmPassword") ?? "");
+        if (password !== confirmPassword) {
+          setAuthError("The passwords do not match.");
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setAuthMessage("Your password has been updated.");
+        navigateToView("Overview");
       }
     } catch (error) {
       console.error("Supabase authentication failed.", error);
@@ -199,61 +257,20 @@ function App() {
   }
 
   async function handleSignOut() {
-    if (!supabase) return;
+    if (!supabase) {
+      setLocalAuthenticated(false);
+      setProfile(demoProfile);
+      navigateToAuthPage("login", true);
+      return;
+    }
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      navigateToAuthPage("login");
     } catch (error) {
       console.error("Unable to sign out of Supabase.", error);
       showToast("Unable to sign out. Try again.");
     }
-  }
-
-  function addSkill(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const skill = String(form.get("skill") ?? "").trim();
-    if (!skill) return;
-    if (profile.skills.some((item) => item.toLowerCase() === skill.toLowerCase())) {
-      showToast("That skill is already on your profile.");
-      return;
-    }
-    updateProfile("skills", [...profile.skills, skill]);
-    event.currentTarget.reset();
-    showToast("Skill added to your profile.");
-  }
-
-  function removeSkill(skillToRemove: string) {
-    updateProfile("skills", profile.skills.filter((skill) => skill !== skillToRemove));
-  }
-
-  function addExperience(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const item: Experience = {
-      role: String(form.get("role") ?? "").trim(),
-      company: String(form.get("company") ?? "").trim(),
-      dates: String(form.get("dates") ?? "").trim(),
-      description: String(form.get("description") ?? "").trim(),
-    };
-    if (!item.role || !item.company) return;
-    updateProfile("experience", [item, ...profile.experience]);
-    setModal(null);
-    showToast("Experience added.");
-  }
-
-  function addAchievement(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const item: Achievement = {
-      title: String(form.get("title") ?? "").trim(),
-      issuer: String(form.get("issuer") ?? "").trim(),
-      year: String(form.get("year") ?? "").trim(),
-    };
-    if (!item.title || !item.issuer) return;
-    updateProfile("achievements", [item, ...profile.achievements]);
-    setModal(null);
-    showToast("Achievement added.");
   }
 
   function copyProfileLink() {
@@ -263,13 +280,13 @@ function App() {
   function renderMain() {
     switch (activeView) {
       case "Personal details":
-        return <PersonalDetails profile={profile} onEdit={() => setModal("personal")} />;
+        return <PersonalDetails profile={profile} />;
       case "Experience":
-        return <ExperienceSection experience={profile.experience} onAdd={() => setModal("experience")} onRemove={(index) => updateProfile("experience", profile.experience.filter((_, itemIndex) => itemIndex !== index))} />;
+        return <ExperienceSection experience={profile.experience} />;
       case "Skills":
-        return <SkillsSection skills={profile.skills} onAdd={addSkill} onRemove={removeSkill} />;
+        return <SkillsSection skills={profile.skills} />;
       case "Achievements":
-        return <AchievementsSection achievements={profile.achievements} onAdd={() => setModal("achievement")} onRemove={(index) => updateProfile("achievements", profile.achievements.filter((_, itemIndex) => itemIndex !== index))} />;
+        return <AchievementsSection achievements={profile.achievements} />;
       case "Projects & education":
         return <ProjectsEducationSection projects={profile.projects} education={profile.education} />;
       default:
@@ -278,9 +295,7 @@ function App() {
             profile={profile}
             completion={completion}
             onNavigate={navigateToView}
-            onEdit={() => setModal("personal")}
             onCopy={copyProfileLink}
-            onAddExperience={() => setModal("experience")}
           />
         );
     }
@@ -289,8 +304,33 @@ function App() {
   if (supabase && !authReady) {
     return <LoadingScreen message="Connecting to your account…" />;
   }
-  if (supabase && !authUser) {
-    return <AuthScreen error={authError} message={authMessage} busy={authBusy} onSubmit={handleAuth} />;
+  if (!isAuthenticated) {
+    return (
+      <AuthScreen
+        page={authPage ?? "login"}
+        configured={Boolean(supabase) || localAuthEnabled}
+        localMode={localAuthEnabled}
+        error={authError}
+        message={authMessage}
+        busy={authBusy}
+        onNavigate={navigateToAuthPage}
+        onSubmit={handleAuth}
+      />
+    );
+  }
+  if (authPage === "reset-password") {
+    return (
+      <AuthScreen
+        page={authPage}
+        configured={Boolean(supabase)}
+        localMode={false}
+        error={authError}
+        message={authMessage}
+        busy={authBusy}
+        onNavigate={navigateToAuthPage}
+        onSubmit={handleAuth}
+      />
+    );
   }
   if (supabase && authUser && profileError) {
     return <LoadingScreen message={profileError} action="Retry" onAction={() => window.location.reload()} />;
@@ -329,7 +369,7 @@ function App() {
             <span className="account-name">{profile.name}<small>{supabase ? authUser?.email : "Personal account"}</small></span>
             <span className="account-more">···</span>
           </button>
-          {supabase && <button className="logout-button" onClick={handleSignOut}>Sign out</button>}
+          {(supabase || localAuthEnabled) && <button className="logout-button" onClick={handleSignOut}>Sign out</button>}
         </div>
       </aside>
 
@@ -339,7 +379,7 @@ function App() {
           <div className="breadcrumb"><span>My profile</span><Icon name="chevron" size={14} /><strong>{activeView}</strong></div>
           <div className="topbar-actions">
             <span className={`environment-badge environment-${appEnvironment}`}>{appEnvironment.toUpperCase()}</span>
-            <span className="saved-status"><span /> {saveStatus}</span>
+            <span className="view-only-status">VIEW ONLY</span>
             <button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("You're all caught up.")}><Icon name="bell" /></button>
             <button className="top-avatar" onClick={() => navigateToView("Personal details")} aria-label="Open personal details"><Avatar name={profile.name} small /></button>
           </div>
@@ -348,42 +388,12 @@ function App() {
           {renderMain()}
           <footer className="page-footer">
             <span>© 2025 Careerfolio</span>
-            <span><span className="privacy-dot" /> Your profile is private until you share it</span>
+            <span><span className="privacy-dot" /> Profile content is read-only</span>
             <button onClick={() => showToast("Help center coming soon.")}>Help center</button>
           </footer>
         </div>
       </main>
       {toast && <div className="toast" role="status"><span className="toast-check"><Icon name="check" size={15} /></span>{toast}</div>}
-      {modal && (
-        <Modal title={modal === "personal" ? "Edit personal details" : modal === "experience" ? "Add experience" : "Add achievement"} onClose={() => setModal(null)}>
-          {modal === "personal" ? (
-            <form className="edit-form" onSubmit={(event) => { event.preventDefault(); const values = new FormData(event.currentTarget); updateProfile("name", String(values.get("name") ?? "").trim()); updateProfile("title", String(values.get("title") ?? "").trim()); updateProfile("location", String(values.get("location") ?? "").trim()); updateProfile("email", String(values.get("email") ?? "").trim()); updateProfile("website", String(values.get("website") ?? "").trim()); updateProfile("summary", String(values.get("summary") ?? "").trim()); setModal(null); showToast("Your details have been updated."); }}>
-              <label>Full name<input name="name" defaultValue={profile.name} required /></label>
-              <label>Professional title<input name="title" defaultValue={profile.title} required /></label>
-              <label>Location<input name="location" defaultValue={profile.location} /></label>
-              <label>Email<input type="email" name="email" defaultValue={profile.email} /></label>
-              <label>Website<input name="website" defaultValue={profile.website} /></label>
-              <label>About you<textarea name="summary" defaultValue={profile.summary} rows={4} maxLength={400} /></label>
-              <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button className="button button-primary">Save details</button></div>
-            </form>
-          ) : modal === "experience" ? (
-            <form className="edit-form" onSubmit={addExperience}>
-              <label>Job title<input name="role" placeholder="e.g. Product Designer" required /></label>
-              <label>Company<input name="company" placeholder="e.g. Acme Inc." required /></label>
-              <label>Dates<input name="dates" placeholder="e.g. 2022 — Present" /></label>
-              <label>Description<textarea name="description" rows={3} placeholder="What did you work on?" /></label>
-              <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button className="button button-primary">Add experience</button></div>
-            </form>
-          ) : (
-            <form className="edit-form" onSubmit={addAchievement}>
-              <label>Achievement or certification<input name="title" placeholder="e.g. UX Design Professional Certificate" required /></label>
-              <label>Issuer<input name="issuer" placeholder="e.g. Google" required /></label>
-              <label>Year<input name="year" placeholder="e.g. 2024" /></label>
-              <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button className="button button-primary">Add achievement</button></div>
-            </form>
-          )}
-        </Modal>
-      )}
     </div>
   );
 }
