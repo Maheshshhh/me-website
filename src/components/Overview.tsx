@@ -7,12 +7,13 @@ type OverviewProps = {
   completion: number;
   onNavigate: (view: View) => void;
   onCopy: () => void;
+  onEdit: () => void;
 };
 
-export default function Overview({ profile, completion, onNavigate, onCopy }: OverviewProps) {
+export default function Overview({ profile, completion, onNavigate, onCopy, onEdit }: OverviewProps) {
   return (
     <>
-      <PageHeading eyebrow="YOUR CAREER, AT A GLANCE" title={`Good morning, ${profile.name.split(" ")[0] || "there"}`} description="A little progress today can open a big door tomorrow." action={<button className="button button-outline" onClick={onCopy}><Icon name="link" size={16} /> Share profile</button>} />
+      <PageHeading eyebrow="YOUR CAREER, AT A GLANCE" title={`Good morning, ${profile.name.split(" ")[0] || "there"}`} description="A little progress today can open a big door tomorrow." action={<div className="page-heading-actions"><button className="button button-outline" onClick={onEdit}>Edit details</button><button className="button button-outline" onClick={onCopy}><Icon name="link" size={16} /> Share profile</button></div>} />
       <section className="profile-hero">
         <div className="hero-top"><div className="hero-label"><span className="live-dot" /> YOUR PROFESSIONAL PROFILE</div></div>
         <div className="hero-person">

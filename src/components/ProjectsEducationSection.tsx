@@ -5,12 +5,13 @@ import { EmptyState, PageHeading } from "./ProfileUi";
 type ProjectsEducationSectionProps = {
   projects: Project[];
   education: Education[];
+  onEdit: () => void;
 };
 
-export default function ProjectsEducationSection({ projects, education }: ProjectsEducationSectionProps) {
+export default function ProjectsEducationSection({ projects, education, onEdit }: ProjectsEducationSectionProps) {
   return (
     <>
-      <PageHeading eyebrow="SELECTED WORK & LEARNING" title="Projects & education" description="A snapshot of the domains you've worked in and the foundation behind your skills." />
+      <PageHeading eyebrow="SELECTED WORK & LEARNING" title="Projects & education" description="A snapshot of the domains you've worked in and the foundation behind your skills." action={<button className="button button-outline" onClick={onEdit}>Edit</button>} />
       <section className="section-panel">
         <div className="section-panel-heading"><div><h3>Projects & domains</h3><p>Representative applications and industries from your resume.</p></div><span className="count-pill">{projects.length} projects</span></div>
         {projects.length ? (

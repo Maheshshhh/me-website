@@ -4,11 +4,11 @@ A lightweight React + TypeScript professional-profile portal built with Vite. It
 
 | Environment | Where it runs | Data/backend |
 | --- | --- | --- |
-| Development | Local machine only (`npm run dev`) | Hardcoded local test account and demo profile |
-| UAT | GitHub Pages at `/me-website/uat/` | Read-only profiles from the UAT GitHub Environment configuration |
-| Production | GitHub Pages at `/me-website/` | Read-only profiles from the production GitHub Environment configuration |
+| Development | Local machine only (`npm run dev`) | Local test account and browser-saved profile |
+| UAT | GitHub Pages at `/me-website/uat/` | User-owned profiles in the UAT Supabase project |
+| Production | GitHub Pages at `/me-website/` | User-owned profiles in the production Supabase project |
 
-Profile content is view-only in the website: editing, adding, and removing profile data are disabled. The demo profile is loaded directly from the app and is not saved to browser storage. When Supabase is configured for UAT or production, the website can authenticate and read a profile but does not write profile changes.
+Each signed-in user can create and edit only their own profile. Recruiter preview is read-only. Owners may enable an unlisted share link; anyone with that link can view the public profile and download its resume, but phone numbers are never included. Owners can disable sharing to revoke the link.
 
 ## Local development
 
@@ -19,7 +19,7 @@ npm run dev
 
 The local development server is available at `http://localhost:8080`.
 
-`.env.development` labels the local build. The local-only test account is configured in the ignored `.env.development.local` file with `VITE_LOCAL_AUTH_USERNAME` and `VITE_LOCAL_AUTH_PASSWORD`. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. The local account is only a development gate, not production authentication.
+`.env.development` labels the local build. The local-only test account is configured in the ignored `.env.development.local` file with `VITE_LOCAL_AUTH_USERNAME` and `VITE_LOCAL_AUTH_PASSWORD`. Development mode never initializes the Supabase client, even if Supabase variables are present in the shell or a local override. The local account is only a development gate and saves profile fields in this browser; resume uploads and public sharing require a Supabase-configured UAT or production environment.
 
 ## Tests
 
@@ -54,7 +54,12 @@ In repository settings, configure GitHub Pages to use **GitHub Actions**. The wo
 
 These are browser publishable/anon settings, not secrets. Never configure a Supabase service-role key in the frontend or as a `VITE_` variable. If an environment has no Supabase variables configured, it runs in demo mode.
 
-The Supabase migration at `supabase/migrations/20261031000000_initial_profile.sql` provides per-user row-level access and private resume storage. Apply it separately to both the UAT and production Supabase projects.
+Apply the migrations in order to both the UAT and production Supabase projects:
+
+1. `supabase/migrations/20261031000000_initial_profile.sql` creates user-owned profile storage and a private resume bucket.
+2. `supabase/migrations/20261111000000_profile_editor_and_sharing.sql` adds owner-controlled unlisted share links, a public read-only profile function that excludes phone numbers, and resume downloads available only while sharing is enabled.
+
+The existing profile RLS rules restrict profile reads and writes to the authenticated owner. The public RPC returns only an explicit allowlist of recruiter profile fields. Share links use unguessable UUID tokens; anyone who has the link can see the profile email and download the resume, so share only with intended recipients. Disabling sharing makes both the page and resume unavailable.
 
 When configuring Supabase Authentication, set the Site URL to the matching site root. Add these URLs to the allowed redirect URLs for each project:
 
@@ -65,9 +70,9 @@ When configuring Supabase Authentication, set the Site URL to the matching site 
 - `https://maheshshhh.github.io/me-website/uat/login`
 - `https://maheshshhh.github.io/me-website/uat/reset-password`
 
-Email/password sign-in, sign-up, email confirmation, and password recovery are supported. Profile data remains read-only in the website.
+Email/password sign-in, sign-up, email confirmation, and password recovery are supported. First-time users are prompted to create a profile after signing in.
 
-The resume and mobile number are currently hidden from the profile, and the resume file is excluded from new GitHub Pages builds. Earlier public commits may still contain both in Git history; removing them from the current site does not remove previously accessible copies.
+Phone numbers remain private and are not displayed in recruiter previews or shared profiles. Resume files are stored in the private Supabase Storage bucket, not in GitHub Pages builds. Earlier public commits may still contain historical profile content; current-site privacy changes do not remove previously accessible copies.
 
 ## Scale boundary
 

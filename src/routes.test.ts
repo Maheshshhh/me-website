@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { View } from "./profile";
-import { getAuthPageFromPathname, getPathnameForAuthPage, getPathnameForView, getViewFromPathname, type AuthPage } from "./routes";
+import {
+  getAuthPageFromPathname,
+  getPathnameForAuthPage,
+  getPathnameForPreview,
+  getPathnameForSharedProfile,
+  getPathnameForView,
+  getSharedProfileTokenFromPathname,
+  getViewFromPathname,
+  isPreviewPathname,
+  type AuthPage,
+} from "./routes";
 
 describe("profile section paths", () => {
   it.each([
@@ -39,6 +49,20 @@ describe("profile section paths", () => {
     it("returns null for paths that are not authentication pages", () => {
       expect(getAuthPageFromPathname("/experience", "/")).toBeNull();
     });
+  });
+
+  it("builds and parses owner preview and shared-profile routes", () => {
+    const token = "123e4567-e89b-12d3-a456-426614174000";
+
+    expect(getPathnameForPreview("/me-website/uat/")).toBe("/me-website/uat/preview");
+    expect(isPreviewPathname("/me-website/uat/preview", "/me-website/uat/")).toBe(true);
+    expect(getPathnameForSharedProfile(token, "/me-website/uat/")).toBe(`/me-website/uat/p/${token}`);
+    expect(getSharedProfileTokenFromPathname(`/me-website/uat/p/${token}`, "/me-website/uat/")).toBe(token);
+    expect(getSharedProfileTokenFromPathname("/me-website/uat/p/not-a-token", "/me-website/uat/")).toBeNull();
+  });
+
+  it("rejects malformed tokens when building a share URL", () => {
+    expect(() => getPathnameForSharedProfile("invalid", "/")).toThrow("Invalid profile share token.");
   });
 
   it.each([
